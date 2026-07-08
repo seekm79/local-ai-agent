@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workspace", "workspace", "{5A457842-FB45-8F1D-F7AD-AB94A1461D60}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cs-hello", "workspace\cs-hello\cs-hello.csproj", "{97C516CE-BF9F-006F-1597-B4118FADE965}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{97C516CE-BF9F-006F-1597-B4118FADE965}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97C516CE-BF9F-006F-1597-B4118FADE965}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97C516CE-BF9F-006F-1597-B4118FADE965}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97C516CE-BF9F-006F-1597-B4118FADE965}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{97C516CE-BF9F-006F-1597-B4118FADE965} = {5A457842-FB45-8F1D-F7AD-AB94A1461D60}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {46A03D3A-84B5-4605-A52F-F675735F2EF9}
+	EndGlobalSection
+EndGlobal

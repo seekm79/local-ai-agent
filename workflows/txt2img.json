@@ -1,0 +1,53 @@
+{
+  "name": "Text to Image (SD1.5)",
+  "description": "Basic Stable Diffusion 1.5 text-to-image. Requires a checkpoint installed in ComfyUI (edit `ckpt_name` in the workflow below to match yours).",
+  "slots": [
+    { "key": "positive", "label": "Prompt", "type": "text", "default": "a cozy cabin in a pine forest, golden hour, highly detailed" },
+    { "key": "negative", "label": "Negative prompt", "type": "text", "default": "blurry, low quality, watermark" },
+    { "key": "seed", "label": "Seed", "type": "int", "default": 0 },
+    { "key": "steps", "label": "Steps", "type": "int", "default": 20 },
+    { "key": "width", "label": "Width", "type": "int", "default": 512 },
+    { "key": "height", "label": "Height", "type": "int", "default": 512 }
+  ],
+  "workflow": {
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": "{{seed}}",
+        "steps": "{{steps}}",
+        "cfg": 7,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1,
+        "model": ["4", 0],
+        "positive": ["6", 0],
+        "negative": ["7", 0],
+        "latent_image": ["5", 0]
+      }
+    },
+    "4": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": { "ckpt_name": "v1-5-pruned-emaonly.safetensors" }
+    },
+    "5": {
+      "class_type": "EmptyLatentImage",
+      "inputs": { "width": "{{width}}", "height": "{{height}}", "batch_size": 1 }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": { "text": "{{positive}}", "clip": ["4", 1] }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": { "text": "{{negative}}", "clip": ["4", 1] }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": { "samples": ["3", 0], "vae": ["4", 2] }
+    },
+    "9": {
+      "class_type": "SaveImage",
+      "inputs": { "filename_prefix": "workbench", "images": ["8", 0] }
+    }
+  }
+}
