@@ -24,6 +24,7 @@ export default function AgentsView() {
   const { projects, currentId, loadProjects, selectProject } = useProject();
   const { models, model, setModel } = useSession();
   const [modesOpen, setModesOpen] = useState(false);
+  const [strategy, setStrategy] = useState<"single" | "orchestrated">("single");
 
   useEffect(() => {
     connect();
@@ -45,6 +46,7 @@ export default function AgentsView() {
       goal: goal.trim(),
       model,
       max_iterations,
+      strategy,
     });
   };
 
@@ -108,18 +110,42 @@ export default function AgentsView() {
           />
         </label>
 
-        <label className="flex items-center gap-2 text-xs text-neutral-400">
-          Max fix iterations
-          <input
-            id={maxIterId}
-            type="number"
-            min={1}
-            max={5}
-            defaultValue={3}
-            className="w-16 rounded border border-edge bg-panel px-2 py-1 text-sm"
+        <label className="text-xs text-neutral-400">
+          Strategy
+          <select
+            className="mt-1 w-full rounded border border-edge bg-panel px-2 py-1 text-sm text-neutral-200"
+            value={strategy}
+            onChange={(e) =>
+              setStrategy(e.target.value as "single" | "orchestrated")
+            }
             disabled={running}
-          />
+          >
+            <option value="single">Single — plan once (small goals)</option>
+            <option value="orchestrated">
+              Orchestrated — backlog + agent loop (large apps)
+            </option>
+          </select>
+          <span className="mt-1 block text-[11px] leading-tight text-neutral-500">
+            {strategy === "orchestrated"
+              ? "Decomposes the goal into a task backlog; each task runs a read→edit→build ReAct loop. Best for multi-module builds."
+              : "One plan, one shot per step. Fast for a single focused change."}
+          </span>
         </label>
+
+        {strategy === "single" && (
+          <label className="flex items-center gap-2 text-xs text-neutral-400">
+            Max fix iterations
+            <input
+              id={maxIterId}
+              type="number"
+              min={1}
+              max={5}
+              defaultValue={3}
+              className="w-16 rounded border border-edge bg-panel px-2 py-1 text-sm"
+              disabled={running}
+            />
+          </label>
+        )}
 
         {running ? (
           <button

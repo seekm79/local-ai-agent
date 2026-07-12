@@ -70,6 +70,21 @@ def read_file(project_id: int, path: str) -> dict:
         raise HTTPException(404, "file not found")
     if target.stat().st_size > MAX_TEXT_BYTES:
         raise HTTPException(413, "file too large to open as text")
+    # Word documents: return extracted text (viewer shows it read-only).
+    if target.suffix.lower() == ".docx":
+        try:
+            import docx  # python-docx
+        except ImportError:
+            raise HTTPException(415, "python-docx not installed — cannot extract Word text")
+        try:
+            document = docx.Document(str(target))
+            content = "\n".join(p.text for p in document.paragraphs)
+        except Exception as exc:
+            raise HTTPException(415, f"could not read Word document: {exc}")
+        return {"path": sandbox.relpath_within(base, target), "content": content,
+                "readonly": True}
+    if target.suffix.lower() == ".doc":
+        raise HTTPException(415, "legacy .doc not supported — convert to .docx")
     try:
         content = target.read_text(encoding="utf-8")
     except UnicodeDecodeError:

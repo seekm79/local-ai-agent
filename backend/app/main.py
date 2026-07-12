@@ -10,7 +10,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config
+from . import config, crud
 from .db import init_db
 from .routers import agents, browser, build, chat, checkpoints, comfy, files, modes
 from .routers import projects, run, search
@@ -50,6 +50,9 @@ async def _startup() -> None:
     init_db()
     settings.load()  # apply persisted setting overrides onto config
     modes_svc.seed_defaults()  # ensure built-in agent modes exist
+    orphaned = crud.reset_orphaned_runs()  # clear runs stuck 'running' from a prior process
+    if orphaned:
+        log.info("Reset %d orphaned run(s) left over from a previous process", orphaned)
     log.info("SQLite ready at %s", config.DB_PATH)
     log.info("Projects root: %s", config.PROJECTS_ROOT)
     config.PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)

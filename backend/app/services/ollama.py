@@ -16,6 +16,9 @@ pointed at Ollama's `/v1` with a dummy key.
 """
 from __future__ import annotations
 
+import base64
+import os
+from pathlib import Path
 from typing import AsyncIterator, Literal
 
 import httpx
@@ -40,6 +43,65 @@ async def list_models() -> list[str]:
         resp.raise_for_status()
         data = resp.json()
     return [m["id"] for m in data.get("data", [])]
+
+
+_VISION_HINTS = ("vl", "llava", "vision", "minicpm-v", "moondream", "bakllava")
+
+
+async def find_vision_model() -> str | None:
+    """Pick an installed multimodal model (env override wins, else name hints)."""
+    override = os.environ.get("WORKBENCH_MODEL_VISION")
+    try:
+        models = await list_models()
+    except Exception:
+        return None
+    if override and override in models:
+        return override
+    for m in models:
+        base_name = m.lower().split(":")[0]
+        if any(h in base_name.split("-") for h in _VISION_HINTS) or \
+                any(h in m.lower() for h in ("llava", "vision", "moondream")):
+            return m
+    return None
+
+
+async def describe_image(path: str | Path, purpose: str = "design reference") -> str | None:
+    """Describe an image with an installed vision model. Uses Ollama's NATIVE
+    /api/chat (not the OpenAI shim) so we can force a small num_ctx — large
+    vision models default to huge contexts (qwen3-vl: 262k ≈ 89 GB, spilling to
+    CPU and taking minutes); at 8k it fits on GPU and answers in seconds.
+    Returns None when no vision model exists or the call fails — attachment
+    flows must keep working without one."""
+    model = await find_vision_model()
+    if model is None:
+        return None
+    native = config.OLLAMA_BASE_URL.rstrip("/").removesuffix("/v1")
+    try:
+        b64 = base64.b64encode(Path(path).read_bytes()).decode()
+        async with httpx.AsyncClient(timeout=240.0) as client:
+            resp = await client.post(f"{native}/api/chat", json={
+                "model": model,
+                "stream": False,
+                "keep_alive": "30s",
+                # thinking burns the whole token budget before any answer on
+                # reasoning VL models (qwen3-vl) — disable it for descriptions.
+                "think": False,
+                "options": {"num_ctx": 8192, "num_predict": 400},
+                "messages": [{
+                    "role": "user",
+                    "content": (
+                        f"Describe this image as a {purpose} for a web-app builder: "
+                        "subject, layout, style, mood, dominant colors, typography "
+                        "if any. 3-5 sentences, concrete and specific."),
+                    "images": [b64],
+                }],
+            })
+            resp.raise_for_status()
+            msg = resp.json().get("message") or {}
+            content = msg.get("content", "")
+        return content.strip() or None
+    except Exception:
+        return None
 
 
 def _max_suffix_prefix(s: str, marker: str) -> int:

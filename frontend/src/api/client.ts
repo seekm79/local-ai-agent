@@ -256,6 +256,9 @@ export interface StartRunBody {
   model?: string;
   max_iterations?: number;
   halt_on_fail?: boolean;
+  // "single" = plan-once pipeline; "orchestrated" = backlog + ReAct worker loop.
+  strategy?: "single" | "orchestrated";
+  max_steps?: number;
 }
 
 export const startAgentRun = (body: StartRunBody) =>
@@ -267,6 +270,22 @@ export const startAgentRun = (body: StartRunBody) =>
 
 export const listAgentRuns = () =>
   fetch("/api/agents/runs").then((r) => json<AgentRun[]>(r));
+
+export interface AgentStepRow {
+  id: number;
+  run_id: number;
+  idx: number;
+  kind: string;
+  title: string;
+  detail: string | null;
+  status: string;
+  output: string | null;
+}
+
+export const getAgentRun = (runId: number) =>
+  fetch(`/api/agents/runs/${runId}`).then((r) =>
+    json<{ run: AgentRun; steps: AgentStepRow[] }>(r),
+  );
 
 export const cancelAgentRun = (runId: number) =>
   fetch("/api/agents/cancel", {
@@ -382,6 +401,17 @@ export const scaffoldBuild = (name: string, prompt: string) =>
     body: JSON.stringify({ name, prompt }),
   }).then((r) => json<{ project: Project; install_proc: ProcInfo }>(r));
 
+export interface BuildProjectInfo {
+  id: number;
+  name: string;
+  created_at: string;
+  deps_installed: boolean;
+  latest_run: { id: number; status: string; goal: string } | null;
+}
+
+export const listBuildProjects = () =>
+  fetch("/api/build/projects").then((r) => json<BuildProjectInfo[]>(r));
+
 export const startDev = (pid: number) =>
   fetch(`/api/build/dev/${pid}`, { method: "POST" }).then((r) =>
     json<{ proc: ProcInfo }>(r),
@@ -408,7 +438,13 @@ export interface Attachment {
   role: AttachRole;
   kind: string;
   colors?: string[];
+  description?: string; // vision-model interpretation (images)
 }
+
+export const deleteAttachment = (pid: number, assetId: number) =>
+  fetch(`/api/build/attachments/${pid}/${assetId}`, { method: "DELETE" }).then(
+    (r) => json<{ status: string }>(r),
+  );
 
 export const attachBuild = (pid: number, file: File, role: AttachRole) => {
   const fd = new FormData();

@@ -14,3 +14,4 @@ pypdf>=4.0
 # dev / tests
 pytest>=8.0
 pytest-asyncio>=0.23
+python-docx>=1.1

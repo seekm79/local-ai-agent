@@ -48,6 +48,59 @@ def is_protected(rel: str) -> bool:
     )
 
 
+# Instruction/filler words that shouldn't become a project name on their own.
+_NAME_STOP = {
+    "a", "an", "the", "and", "or", "of", "for", "to", "with", "please", "read",
+    "attached", "ai", "prompt", "carefully", "careful", "before", "after", "build",
+    "building", "builds", "create", "creating", "make", "making", "me", "my", "app",
+    "application", "start", "starting", "generate", "generating", "require",
+    "requires", "required", "plan", "planning", "then", "using", "use", "that",
+    "this", "it", "is", "are", "be", "in", "on", "as", "by",
+}
+
+
+def _titlecase(text: str) -> str:
+    """Title-case a name while preserving short all-caps acronyms (CRM, API, SaaS)."""
+    out = []
+    for w in text.split():
+        if w.isupper() and len(w) <= 4:
+            out.append(w)                      # keep acronyms as-is
+        elif w.isalpha():
+            out.append(w[:1].upper() + w[1:].lower())
+        else:
+            out.append(w)                      # punctuation, mixed tokens
+    return " ".join(out)
+
+
+def name_from_prompt(prompt: str) -> str:
+    """Derive a readable project name from a build prompt WITHOUT an LLM.
+
+    Prefers a short title-like first line (e.g. "CRM - Helpdesk"); otherwise drops
+    instruction/filler words and keeps the first few meaningful ones. This is the
+    instant fallback for the LLM namer (routers/build._suggest_name)."""
+    text = (prompt or "").strip()
+    if not text:
+        return "app"
+    first = text.splitlines()[0].strip(" -–—:#*\t").strip()
+    if 2 <= len(first) <= 40 and len(first.split()) <= 6:
+        return _titlecase(first)
+    words = re.findall(r"[A-Za-z0-9]+", text)
+    kept = [w for w in words if w.lower() not in _NAME_STOP][:4]
+    return _titlecase(" ".join(kept)) or "app"
+
+
+def clean_name(raw: str) -> str:
+    """Sanitize a model-produced name: last non-empty line, strip quotes/labels,
+    cap length. Returns "" if it doesn't look like a name (too long/empty)."""
+    line = next((ln.strip() for ln in reversed((raw or "").splitlines()) if ln.strip()), "")
+    line = re.sub(r'^["\'`*#\s-]+|["\'`*\s]+$', "", line)
+    line = line.split(":")[-1].strip()         # drop a "Project name:" label
+    words = line.split()
+    if not words or len(words) > 8:
+        return ""
+    return _titlecase(" ".join(words[:5]))[:48]
+
+
 def scaffold(name: str, overview: str) -> dict:
     """Copy the template into workspace/<slug>/ and fill AGENTS.md. Returns the
     project row. Dependency install happens separately (it's slow + streamed)."""
@@ -57,7 +110,14 @@ def scaffold(name: str, overview: str) -> dict:
         slug, i = f"{base_slug}-{i}", i + 1
 
     dest = (config.PROJECTS_ROOT / slug).resolve()
-    shutil.copytree(config.WEBAPP_TEMPLATE_DIR, dest, dirs_exist_ok=True)
+    # Never copy node_modules or build artifacts from the template: copying a
+    # node_modules breaks its .bin symlinks (e.g. .bin/vite → a dangling path),
+    # so Vite can't launch and EVERY build check fails regardless of the code the
+    # Builder writes. Excluding them lets the post-scaffold `bun install` produce
+    # a correct, fresh install. (.git/.output/dist/.wrangler are just noise.)
+    _skip = shutil.ignore_patterns("node_modules", ".output", "dist",
+                                   ".wrangler", ".git", ".workbench")
+    shutil.copytree(config.WEBAPP_TEMPLATE_DIR, dest, dirs_exist_ok=True, ignore=_skip)
     (dest / "assets").mkdir(exist_ok=True)
     (dest / "public").mkdir(exist_ok=True)
 

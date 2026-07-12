@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import type { AttachRole } from "../../api/client";
+import {
+  deleteAttachment,
+  listAttachments,
+  type Attachment,
+  type AttachRole,
+} from "../../api/client";
 import { useBuild } from "../../stores/build";
 import { useRun } from "../../stores/run";
 import { useAgents } from "../../stores/agents";
@@ -19,6 +24,8 @@ export default function BuildView() {
   const { model } = useSession();
   const processes = useRun((s) => s.processes);
   const agents = useAgents();
+  const [stopping, setStopping] = useState(false);
+  const busy = agents.status === "running" || build.installing;
 
   // Drive install→dev coordination off run-store updates.
   useEffect(() => {
@@ -27,7 +34,23 @@ export default function BuildView() {
 
   useEffect(() => {
     useAgents.getState().connect();
+    // After a browser reload, reopen the project that was on screen — steps,
+    // Code tab, and live preview all come back.
+    void useBuild.getState().restore();
   }, []);
+
+  // Clear the "Stopping…" indicator once the run actually settles.
+  useEffect(() => {
+    if (!busy) setStopping(false);
+  }, [busy]);
+
+  // Pin the agents event stream to the open project so a build running in
+  // another project can't take over this view (it keeps going in background).
+  useEffect(() => {
+    useAgents
+      .getState()
+      .pinProject(build.phase === "work" ? build.projectId : null);
+  }, [build.phase, build.projectId]);
 
   if (build.phase === "entry") {
     return <EntryScreen />;
@@ -42,17 +65,25 @@ export default function BuildView() {
           {build.installing && (
             <span className="text-xs text-accent">installing deps…</span>
           )}
+          {busy && (
+            <button
+              className="ml-auto flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-60"
+              title="Stop the running build (cancels the AI run and dependency install)"
+              disabled={stopping}
+              onClick={() => {
+                setStopping(true);
+                void build.stop();
+              }}
+            >
+              <span className="text-[10px]">■</span> {stopping ? "Stopping…" : "Stop"}
+            </button>
+          )}
           <button
-            className="ml-auto rounded px-2 py-1 text-xs text-neutral-400 hover:bg-edge"
-            onClick={() => {
-              const running = useAgents.getState().status === "running";
-              const msg = running
-                ? "A build is still running. Start a new one? This cancels the current build and stops its dev server. Your project files are kept on disk."
-                : "Start a new build? This stops the current dev server. Your project files are kept on disk.";
-              if (window.confirm(msg)) void build.reset();
-            }}
+            className={(busy ? "" : "ml-auto ") + "rounded px-2 py-1 text-xs text-neutral-400 hover:bg-edge"}
+            title="Back to your projects — a running build keeps going in the background"
+            onClick={() => build.goHome()}
           >
-            ← new
+            ← projects
           </button>
         </div>
 
@@ -90,13 +121,31 @@ export default function BuildView() {
 const roleFor = (file: File): AttachRole =>
   file.type.startsWith("image/") ? "design_reference" : "content";
 
+const RUN_BADGE: Record<string, { label: string; cls: string; pulse?: boolean }> = {
+  running: { label: "building…", cls: "text-amber-400", pulse: true },
+  pending: { label: "starting…", cls: "text-amber-400", pulse: true },
+  done: { label: "✓ done", cls: "text-emerald-400" },
+  failed: { label: "✗ failed", cls: "text-red-400" },
+  interrupted: { label: "✗ interrupted", cls: "text-red-400" },
+  cancelled: { label: "◼ stopped", cls: "text-neutral-500" },
+};
+
 function EntryScreen() {
   const build = useBuild();
   const { model } = useSession();
+  const agentRuns = useAgents((s) => s.runs);
+  const agentStatus = useAgents((s) => s.status);
   const [prompt, setPrompt] = useState("");
   const [attachments, setAttachments] = useState<{ file: File; role: AttachRole }[]>([]);
   const [genImages, setGenImages] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+
+  // Keep the recent-builds list (and its running/done badges) current: on
+  // mount, and whenever a run starts/finishes anywhere.
+  useEffect(() => {
+    void build.loadBuildProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentRuns, agentStatus]);
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
@@ -236,10 +285,57 @@ function EntryScreen() {
             </button>
           ))}
         </div>
+
+        {build.projects.length > 0 && (
+          <div className="mt-8 text-left">
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+              Recent builds
+            </div>
+            <div className="space-y-1.5">
+              {build.projects.map((p) => {
+                const badge = p.latest_run
+                  ? RUN_BADGE[p.latest_run.status] ?? {
+                      label: p.latest_run.status,
+                      cls: "text-neutral-500",
+                    }
+                  : { label: "no runs yet", cls: "text-neutral-600" };
+                return (
+                  <button
+                    key={p.id}
+                    className="flex w-full items-center gap-3 rounded-lg border border-edge bg-panel px-3 py-2 text-left hover:border-accent/50 hover:bg-panelalt"
+                    onClick={() => void build.openProject(p)}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-neutral-200">
+                        {p.name}
+                      </span>
+                      {p.latest_run && (
+                        <span className="block truncate text-xs text-neutral-500">
+                          {p.latest_run.goal}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`shrink-0 text-xs ${badge.cls} ${badge.pulse ? "animate-pulse" : ""}`}
+                    >
+                      {badge.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+const ROLE_BADGE: Record<string, string> = {
+  design_reference: "design ref",
+  asset: "asset",
+  content: "content",
+};
 
 function FollowUpComposer() {
   const build = useBuild();
@@ -247,6 +343,38 @@ function FollowUpComposer() {
   const running = useAgents((s) => s.status === "running");
   const [text, setText] = useState("");
   const [genImages, setGenImages] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+
+  const refresh = async () => {
+    if (build.projectId == null) return;
+    try {
+      setAttachments(await listAttachments(build.projectId));
+    } catch {
+      /* best-effort */
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [build.projectId]);
+
+  const addFiles = async (files: FileList | File[] | null) => {
+    if (!files) return;
+    for (const f of Array.from(files)) await build.attachToProject(f, roleFor(f));
+    void refresh();
+  };
+
+  const remove = async (id?: number) => {
+    if (id == null || build.projectId == null) return;
+    try {
+      await deleteAttachment(build.projectId, id);
+    } catch {
+      /* ignore */
+    }
+    void refresh();
+  };
 
   const submit = () => {
     const t = text.trim();
@@ -256,17 +384,51 @@ function FollowUpComposer() {
   };
 
   return (
-    <div className="border-t border-edge p-2">
+    <div
+      className={"border-t p-2 " + (dragOver ? "border-accent bg-accent/5" : "border-edge")}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        void addFiles(e.dataTransfer.files);
+      }}
+    >
+      {attachments.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {attachments.map((a) => (
+            <span
+              key={a.id ?? a.path}
+              className="group flex items-center gap-1 rounded border border-edge bg-panel px-1.5 py-0.5 text-[11px] text-neutral-300"
+              title={a.description || a.path}
+            >
+              {a.kind === "image" ? "🖼" : "📄"}
+              <span className="max-w-[9rem] truncate">{a.path.split("/").pop()}</span>
+              <span className="text-neutral-500">{ROLE_BADGE[a.role] ?? a.role}</span>
+              {a.description && <span title={a.description}>👁</span>}
+              <button
+                className="text-neutral-500 hover:text-red-400"
+                title="Remove attachment"
+                onClick={() => void remove(a.id)}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="mb-1 flex items-center gap-3 text-xs text-neutral-400">
-        <label className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-edge">
-          📎
+        <label className="cursor-pointer rounded px-1.5 py-0.5 hover:bg-edge" title="Attach files (or drag & drop anywhere on this panel)">
+          📎 Attach
           <input
             type="file"
             multiple
             className="hidden"
             onChange={(e) => {
-              for (const f of Array.from(e.target.files ?? []))
-                void build.attachToProject(f, roleFor(f));
+              void addFiles(e.target.files);
               e.target.value = "";
             }}
           />
@@ -279,6 +441,7 @@ function FollowUpComposer() {
           />
           🎨 images
         </label>
+        {dragOver && <span className="text-accent">drop to attach…</span>}
       </div>
       <div className="flex items-end gap-2">
         <textarea

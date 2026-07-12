@@ -1,20 +1,396 @@
-INFO:     Started server process [25620]
-INFO:     Waiting for application startup.
-INFO:workbench:SQLite ready at C:\github\local-ai-agent\backend\workbench.db
-INFO:workbench:Projects root: C:\Testing\local-ai-workbench\workspace
-INFO:     Application startup complete.
+INFO:     Will watch for changes in these directories: ['/Users/kuanmeng/Documents/GitHub/local-ai-agent/backend/app']
 INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
-INFO:     127.0.0.1:54642 - "GET / HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54643 - "GET /api/settings HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53382 - "GET /api/chats HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53384 - "GET /api/chats HTTP/1.1" 200 OK
+INFO:     Started reloader process [9301] using WatchFiles
+INFO:     Started server process [9303]
+INFO:     Waiting for application startup.
+INFO:workbench:SQLite ready at /Users/kuanmeng/Documents/GitHub/local-ai-agent/backend/workbench.db
+INFO:workbench:Projects root: /Users/kuanmeng/Documents/GitHub/local-ai-agent/workspace
+INFO:     Application startup complete.
 INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
-INFO:     127.0.0.1:53383 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58985 - "GET /api/health HTTP/1.1" 200 OK
 INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
-INFO:     127.0.0.1:53387 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53991 - "WebSocket /ws/agents" [accepted]
+INFO:     127.0.0.1:58987 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:58993 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:58996 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:58999 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59002 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59005 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59010 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59013 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59017 - "WebSocket /ws/run" [accepted]
 INFO:     connection open
+INFO:     127.0.0.1:59020 - "WebSocket /ws/agents" [accepted]
+INFO:     connection open
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59018 - "POST /api/build/scaffold HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59038 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59041 - "GET /api/projects/12/tree?path= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59043 - "GET /api/projects/13/tree?path= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59045 - "POST /api/build/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59047 - "GET /api/build/attachments/13 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59050 - "GET /api/build/attachments/13 HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59063 - "POST /api/build/dev/13 HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
 INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
-INFO:     127.0.0.1:54332 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53916 - "GET /api/projects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64482 - "GET /api/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59134 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59936 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59944 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59947 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59963 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59966 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59969 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59972 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59975 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59989 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59993 - "GET /api/agents/runs HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59995 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:59998 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60001 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60004 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60007 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60010 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60013 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60016 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60019 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60022 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60025 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60028 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60031 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60034 - "POST /api/build/start HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60041 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60049 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60063 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60068 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60071 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60074 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60077 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60080 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60083 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60088 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60091 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60094 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60097 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60111 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60114 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60117 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60120 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60124 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60127 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60130 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60133 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60136 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60139 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60142 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60145 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60148 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60154 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60174 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60179 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60185 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60192 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60198 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60202 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60207 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60211 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60222 - "GET /api/agents/runs HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60224 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60227 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60236 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60239 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60242 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60245 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60248 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60252 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60255 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60258 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60261 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60264 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60267 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60270 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60273 - "POST /api/build/start HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60280 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60288 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60291 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60307 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60310 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60313 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60316 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60319 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60323 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60326 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60329 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60332 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60335 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60338 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60341 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60344 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60347 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/embeddings "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60372 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60403 - "GET /api/agents/runs HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60405 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60422 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60426 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60437 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60443 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60479 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60507 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60511 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60516 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60536 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60539 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60547 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60551 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60554 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60581 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60587 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60592 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60597 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60600 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60651 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60659 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60666 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60670 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60674 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60682 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60689 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60705 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60712 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60717 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60720 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60723 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60729 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60751 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60770 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60773 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60776 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60851 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60910 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60915 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60921 - "GET /api/health HTTP/1.1" 200 OK
+INFO:httpx:HTTP Request: GET http://127.0.0.1:11434/v1/models "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60925 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for background tasks to complete. (CTRL+C to force quit)

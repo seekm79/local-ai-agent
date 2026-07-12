@@ -16,6 +16,7 @@ dotnet -> child, etc.).
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import shutil
 import subprocess
@@ -28,6 +29,30 @@ from .. import config
 
 _IS_WIN = sys.platform == "win32"
 
+# Tool locations that a GUI/launchd-spawned server misses because it never sourced
+# a login shell: bun (~/.bun/bin), homebrew, and user-local installs. Without these
+# on PATH, `bun install` during Build scaffolding silently fails (command not
+# found) → no node_modules → every build check fails. Prepended to PATH for child
+# processes AND used to resolve the executable, since on POSIX subprocess looks up
+# argv[0] against the PARENT's PATH, not a passed env.
+_EXTRA_PATH_DIRS = [
+    str(Path.home() / ".bun" / "bin"),
+    str(Path.home() / ".local" / "bin"),
+    str(Path.home() / ".cargo" / "bin"),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+]
+
+
+def _augmented_path() -> str:
+    existing = os.environ.get("PATH", "")
+    dirs = [d for d in _EXTRA_PATH_DIRS if os.path.isdir(d) and d not in existing.split(os.pathsep)]
+    return os.pathsep.join(dirs + ([existing] if existing else []))
+
+
+def _child_env() -> dict:
+    return {**os.environ, "PATH": _augmented_path()}
+
 # Detect a dev-server URL in runner output (Vite/Next/etc.). Vite colorizes the
 # port, injecting ANSI codes *inside* the URL, so strip ANSI before matching.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
@@ -35,15 +60,17 @@ _URL_RE = re.compile(r"https?://(?:localhost|127\.0\.0\.1)(?::\d+)?(?:/\S*)?")
 
 
 def _normalize_argv(argv: list[str]) -> list[str]:
-    """Windows: resolve argv[0] on PATH and, if it's a .cmd/.bat shim (npm,
-    flutter, ...), run it through `cmd /c` — CreateProcess can't exec batch
-    files directly. On POSIX, return argv unchanged."""
-    if not _IS_WIN or not argv:
+    """Resolve argv[0] to a full path against the augmented PATH so tools outside a
+    GUI/launchd process's PATH (bun, homebrew, user-local) are still found — on
+    POSIX, subprocess resolves argv[0] against the PARENT's PATH, which such a
+    server lacks. On Windows, also wrap .cmd/.bat shims (npm, flutter) through
+    `cmd /c`, since CreateProcess can't exec batch files directly."""
+    if not argv:
         return argv
-    resolved = shutil.which(argv[0])
+    resolved = shutil.which(argv[0], path=_augmented_path())
     if not resolved:
         return argv  # let it FileNotFoundError with the original name
-    if resolved.lower().endswith((".cmd", ".bat")):
+    if _IS_WIN and resolved.lower().endswith((".cmd", ".bat")):
         return ["cmd", "/c", resolved, *argv[1:]]
     return [resolved, *argv[1:]]
 
@@ -112,6 +139,7 @@ class Runner:
                 stderr=asyncio.subprocess.STDOUT,
                 stdin=asyncio.subprocess.DEVNULL,
                 creationflags=creationflags,
+                env=_child_env(),
             )
         except FileNotFoundError:
             info.status = "exited"
@@ -219,6 +247,7 @@ async def run_capture(
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             stdin=asyncio.subprocess.DEVNULL,
+            env=_child_env(),
         )
     except FileNotFoundError:
         return 127, f"command not found: {argv[0]}"
@@ -239,7 +268,7 @@ runner = Runner()
 
 # --- Project-type detection --------------------------------------------------
 def _tool(name: str) -> bool:
-    return shutil.which(name) is not None
+    return shutil.which(name, path=_augmented_path()) is not None
 
 
 def detect_runners(base: Path) -> list[dict]:

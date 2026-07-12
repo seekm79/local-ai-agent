@@ -80,6 +80,63 @@ def extract_json(text: str) -> dict | list:
     raise ValueError("no valid JSON found in model output")
 
 
+# A dedicated, code-safe directive for asset generation. The coder emits lines
+# like:  GENERATE_IMAGE: {"path": "public/hero.png", "prompt": "...", "animate": false}
+# Parsed on its own — unlike a loose JSON scan, this never collides with the
+# {...} that appears throughout the TSX the coder also writes.
+_IMAGE_DIRECTIVE_RE = re.compile(r"^\s*GENERATE_IMAGE:\s*(\{.*\})\s*$", re.M)
+
+
+def parse_image_directives(content: str) -> list[dict]:
+    """Return the GENERATE_IMAGE directives found in a coder response."""
+    out: list[dict] = []
+    for m in _IMAGE_DIRECTIVE_RE.finditer(content):
+        try:
+            d = json.loads(m.group(1))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(d, dict) and d.get("path") and d.get("prompt"):
+            out.append(d)
+    return out
+
+
+# Web-root asset references the coder writes into TSX/CSS, e.g. src="/hero.png"
+# or url('/coffee-shop-bg.jpg'). Raster only — SVG/ICO can't be model-generated.
+_ASSET_REF_RE = re.compile(r"""["'(]\s*/([A-Za-z0-9][\w./-]*\.(?:png|jpe?g|webp|gif))""")
+_ANIMATE_HINTS = ("anim", "loop", "video", "motion", "cinemagraph")
+
+
+def find_referenced_assets(blobs: list[str], base: Path) -> list[tuple[str, bool]]:
+    """Scan written file contents for web-root image references that don't yet
+    exist under public/. Returns [(public-relative-path, animate?)] deduped — the
+    Builder naming an <img>/background is treated as a request to generate it."""
+    seen: dict[str, bool] = {}
+    for blob in blobs:
+        for m in _ASSET_REF_RE.finditer(blob):
+            name = m.group(1).lstrip("/")
+            if name.startswith("public/"):
+                name = name[len("public/"):]
+            if "favicon" in name.lower():
+                continue
+            dest = f"public/{name}"
+            if (base / dest).exists() or dest in seen:
+                continue
+            low = name.lower()
+            animate = low.endswith(".webp") or any(h in low for h in _ANIMATE_HINTS)
+            seen[dest] = animate
+    return list(seen.items())
+
+
+def asset_prompt(dest: str, goal: str) -> str:
+    """Build a generation prompt from the asset's filename + the build goal so
+    the image matches the app (e.g. 'coffee shop bg' + the coffee-shop request)."""
+    stem = Path(dest).stem
+    for junk in ("bg", "background", "hero", "img", "image", "banner"):
+        stem = re.sub(rf"[-_ ]?{junk}$", "", stem, flags=re.I)
+    subject = re.sub(r"[-_]+", " ", stem).strip() or "background"
+    return f"{subject}, {goal}".strip()[:400]
+
+
 # --- Project inspection ------------------------------------------------------
 def _file_tree(base: Path, limit: int = 200) -> str:
     lines: list[str] = []
@@ -104,6 +161,39 @@ def _read_safe(base: Path, rel: str, budget: int = 4000) -> str:
         return target.read_text(encoding="utf-8")[:budget]
     except Exception:
         return ""
+
+
+def _crawl_context(base: Path, attachments: list[dict]) -> str:
+    """Crawl the project before a build: inventory everything the Builder needs
+    for a complete understanding — available ui components, current route code,
+    existing assets, attachments. Pure filesystem walk, no model call."""
+    parts: list[str] = []
+    ui = sorted(p.stem for p in (base / "src" / "components" / "ui").glob("*.tsx"))
+    if ui:
+        parts.append("AVAILABLE shadcn/ui COMPONENTS (import from @/components/ui/<name>):\n"
+                     + ", ".join(ui))
+    routes_dir = base / "src" / "routes"
+    if routes_dir.is_dir():
+        for r in sorted(routes_dir.glob("*.tsx")):
+            rel = r.relative_to(base).as_posix()
+            parts.append(f"--- CURRENT {rel} ---\n{_read_safe(base, rel, budget=3500)}")
+    pub = base / "public"
+    if pub.is_dir():
+        assets = sorted(p.name for p in pub.iterdir() if p.is_file())
+        parts.append("EXISTING public/ ASSETS (reference these before generating new ones): "
+                     + (", ".join(assets) or "none"))
+    css = _read_safe(base, "src/styles.css", budget=1200)
+    if css:
+        parts.append(f"--- THEME TOKENS (src/styles.css, excerpt) ---\n{css}")
+    att = [
+        f"[{a['role']}] {a.get('path','')}"
+        + (f" — {a['description']}" if a.get("description") else "")
+        for a in attachments
+    ]
+    if att:
+        parts.append("USER ATTACHMENTS: " + "; ".join(att))
+    parts.append("PROJECT FILE TREE (excerpt):\n" + _file_tree(base, limit=120))
+    return "\n\n".join(parts)
 
 
 def check_command(base: Path) -> list[str] | None:
@@ -133,6 +223,27 @@ _CODE_BLOCK_RE = re.compile(r"```[a-zA-Z0-9+#.\-]*\n(.*?)```", re.S)
 _FILE_MARKER_RE = re.compile(
     r"FILE:\s*(\S+)\s*```[a-zA-Z0-9+#.\-]*\n(.*?)```", re.S
 )
+
+
+def _clip_error(out: str, budget: int = 4000) -> str:
+    """Clip a long build log keeping BOTH ends. Compilers print the actual error
+    first (e.g. Vite's 'Error transforming route file … SyntaxError …') while
+    bundlers append long stack traces; tail-only clipping used to hide the real
+    error from the fix loop, so retries were blind."""
+    if len(out) <= budget:
+        return out
+    half = budget // 2
+    return out[:half] + "\n... [log clipped] ...\n" + out[-half:]
+
+
+# The coder writes text — binary assets come from generate_image, never from a
+# FILE/EDIT block (a text write would corrupt them; reading one as utf-8 crashes).
+_BINARY_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".mp4", ".webm",
+                ".woff", ".woff2", ".ttf", ".otf", ".pdf", ".zip"}
+
+
+def _is_binary_path(p: str) -> bool:
+    return Path(p).suffix.lower() in _BINARY_EXTS
 
 
 def _clean_path(p: str) -> str:
@@ -284,6 +395,97 @@ class Pipeline:
             return True
         return False
 
+    # --- Orchestrated run (Phase 10) -----------------------------------------
+    def start_orchestrated(
+        self, *, run_id: int, project_id: int, goal: str, model: str,
+        helper_model: str, max_steps: int,
+    ) -> None:
+        cancel = asyncio.Event()
+        self._cancels[run_id] = cancel
+        self._tasks[run_id] = asyncio.create_task(self._run_orchestrated(
+            run_id=run_id, project_id=project_id, goal=goal, model=model,
+            helper_model=helper_model, max_steps=max_steps, cancel=cancel))
+
+    async def _run_orchestrated(
+        self, *, run_id: int, project_id: int, goal: str, model: str,
+        helper_model: str, max_steps: int, cancel: asyncio.Event,
+    ) -> None:
+        """Roo-Code-style path: an orchestrator decomposes the goal into a backlog,
+        then each task runs through the real ReAct worker loop (agentic.run_worker)
+        with a checkpoint between tasks. Emits the same events the board renders."""
+        from . import agentic
+
+        proj = crud.get_project(project_id)
+        base = Path(proj["path"]) if proj else None
+        try:
+            if base is None:
+                raise ValueError("project not found")
+            crud.update_run(run_id, "running")
+            project_rules = rules.load_rules(project_id)
+            try:
+                cp = await checkpoints.snapshot(project_id, "before orchestrated run")
+                self._emit("checkpoint", {"run_id": run_id, **cp})
+            except Exception:
+                pass
+
+            # 1) DECOMPOSE — durable task backlog (one agent_step per task).
+            tasks = await agentic.decompose(goal, base, model, project_rules, cancel)
+            step_rows = []
+            for i, t in enumerate(tasks):
+                row = crud.create_step(run_id, i, "task", t["title"], t["detail"])
+                step_rows.append(row)
+            self._emit("run_started", {"run_id": run_id, "project_id": project_id,
+                                       "goal": goal, "steps": [
+                {k: r[k] for k in ("id", "idx", "kind", "title", "detail", "status")}
+                | {"target_files": []} for r in step_rows]})
+
+            # 2) EXECUTE each task through the worker loop.
+            any_failed = False
+            for row in step_rows:
+                if cancel.is_set():
+                    break
+                crud.update_step(row["id"], "running")
+                self._emit("step_started", {"run_id": run_id, "step_id": row["id"],
+                                            "idx": row["idx"], "title": row["title"],
+                                            "kind": "task"})
+                try:
+                    cp = await checkpoints.snapshot(project_id, f"before task: {row['title']}")
+                    self._emit("checkpoint", {"run_id": run_id, "step_id": row["id"], **cp})
+                except Exception:
+                    pass
+                ok, log_json = await agentic.run_worker(
+                    emit=self._emit, run_id=run_id, step_id=row["id"],
+                    project_id=project_id, base=base, task_title=row["title"],
+                    task_detail=row["detail"] or "", goal=goal, model=model,
+                    mode_slug="coder", project_rules=project_rules,
+                    max_steps=max_steps, cancel=cancel)
+                crud.update_step(row["id"], "passed" if ok else "failed", log_json)
+                self._emit("step_update", {"run_id": run_id, "step_id": row["id"],
+                                           "status": "passed" if ok else "failed"})
+                if not ok:
+                    any_failed = True
+
+            if cancel.is_set():
+                crud.update_run(run_id, "cancelled")
+                self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                        "status": "cancelled",
+                                        "summary": "Run cancelled by user."})
+                return
+
+            status = "failed" if any_failed else "done"
+            summary = await self._summarize(run_id, goal, helper_model)
+            crud.update_run(run_id, status, summary)
+            self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                    "status": status, "summary": summary})
+        except Exception as exc:
+            crud.update_run(run_id, "failed", f"error: {exc}")
+            self._emit("error", {"run_id": run_id, "message": f"{type(exc).__name__}: {exc}"})
+            self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                    "status": "failed", "summary": f"Run failed: {exc}"})
+        finally:
+            self._cancels.pop(run_id, None)
+            self._tasks.pop(run_id, None)
+
     # --- state machine -------------------------------------------------------
     async def _run(
         self,
@@ -326,7 +528,7 @@ class Pipeline:
                 step_rows.append(row)
             self._emit(
                 "run_started",
-                {"run_id": run_id, "goal": goal, "steps": [
+                {"run_id": run_id, "project_id": project_id, "goal": goal, "steps": [
                     {k: r[k] for k in ("id", "idx", "kind", "title", "detail", "status")}
                     | {"target_files": r["target_files"]}
                     for r in step_rows
@@ -374,7 +576,8 @@ class Pipeline:
 
             if cancel.is_set():
                 crud.update_run(run_id, "cancelled")
-                self._emit("run_done", {"run_id": run_id, "status": "cancelled",
+                self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                        "status": "cancelled",
                                         "summary": "Run cancelled by user."})
                 return
 
@@ -382,12 +585,14 @@ class Pipeline:
             status = "failed" if any_failed else "done"
             summary = await self._summarize(run_id, goal, helper_model)
             crud.update_run(run_id, status, summary)
-            self._emit("run_done", {"run_id": run_id, "status": status, "summary": summary})
+            self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                    "status": status, "summary": summary})
 
         except Exception as exc:
             crud.update_run(run_id, "failed", f"error: {exc}")
             self._emit("error", {"run_id": run_id, "message": f"{type(exc).__name__}: {exc}"})
-            self._emit("run_done", {"run_id": run_id, "status": "failed",
+            self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                    "status": "failed",
                                     "summary": f"Run failed: {exc}"})
         finally:
             self._cancels.pop(run_id, None)
@@ -445,6 +650,7 @@ class Pipeline:
     async def _execute_step(
         self, run_id: int, project_id: int, base: Path, goal: str, step: dict,
         model: str, project_rules: str, max_iterations: int, cancel: asyncio.Event,
+        allow_image_gen: bool = False,
     ) -> bool:
         step_id = step["id"]
         crud.update_step(step_id, "running")
@@ -482,8 +688,14 @@ class Pipeline:
         for it in range(max_iterations):
             if cancel.is_set():
                 break
+            # Alternative strategy on the last attempt: repeated diff fixes tend to
+            # compound damage (mis-anchored SEARCH blocks splice text mid-file), so
+            # the final iteration abandons diffs and rewrites the file from scratch.
+            force_rewrite = it == max_iterations - 1 and bool(build_errors)
             edit_feedback = await self._code(run_id, project_id, step_id, base, goal,
-                                             step, build_errors, model, project_rules, log)
+                                             step, build_errors, model, project_rules, log,
+                                             allow_image_gen=allow_image_gen,
+                                             force_rewrite=force_rewrite)
             # Diff blocks that didn't match feed straight back for a retry.
             if edit_feedback:
                 build_errors = edit_feedback[-4000:]
@@ -499,7 +711,7 @@ class Pipeline:
             if rc == 0:
                 passed = True
                 break
-            build_errors = out[-4000:]
+            build_errors = _clip_error(out)
             self._emit("step_update", {"run_id": run_id, "step_id": step_id,
                                        "status": f"fixing (attempt {it + 2})"})
 
@@ -508,9 +720,64 @@ class Pipeline:
                                    "status": "passed" if passed else "failed"})
         return passed
 
+    async def _generate_asset(
+        self, run_id: int, step_id: int, project_id: int, base: Path, dest: str,
+        prompt: str, animate: bool, feedback: list[str], log: dict,
+        negative: str | None = None, overwrite: bool = False,
+    ) -> bool:
+        """Generate one asset into `dest` (under public/) via ComfyUI, emitting
+        generate_image tool events. Returns True on success."""
+        dest = _clean_path(dest)
+        # Fix iterations re-emit the same directive; don't burn a ComfyUI render
+        # on an asset that's already on disk (directives can set overwrite: true).
+        if not overwrite and (base / dest).exists():
+            self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
+                                       "tool": "generate_image", "ok": True,
+                                       "output": f"{dest} already exists — skipped "
+                                       "(set \"overwrite\": true to regenerate)"})
+            return True
+        workflow = "ltxv-animation.json" if animate else "txt2img.json"
+        self._emit("tool_call", {"run_id": run_id, "step_id": step_id,
+                                 "tool": "generate_image",
+                                 "args": {"path": dest, "workflow": workflow, "prompt": prompt}})
+        if not dest.startswith("public/") or _forbidden_write(dest):
+            self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
+                                       "tool": "generate_image", "ok": False,
+                                       "output": f"refused: '{dest}' must be under public/"})
+            return False
+        params = {
+            "positive": prompt,
+            "negative": negative or "blurry, low quality, watermark",
+            "width": 768 if animate else 1024,
+            "height": 512 if animate else 1024,
+        }
+        events: list[tuple[str, dict]] = []
+
+        async def _cb(t: str, p: dict, _ev=events) -> None:
+            _ev.append((t, p))
+
+        await comfy.generate(project_id, workflow, params, _cb, dest_rel=dest)
+        err = next((p["message"] for t, p in events if t == "error"), None)
+        paths = [p.get("path") for t, p in events if t == "saved"]
+        notes = [p["message"] for t, p in events if t == "note"]
+        summary = err or (f"saved {', '.join(paths)}" if paths else "no assets returned")
+        if notes and not err:
+            summary += " — " + "; ".join(notes)
+        if err:
+            feedback.append(
+                f"asset {dest} could not be generated ({err}); reference a "
+                "bg-muted placeholder instead and keep going")
+        log["tools"].append({"tool": "generate_image", "ok": err is None, "saved": paths})
+        self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
+                                   "tool": "generate_image", "ok": err is None,
+                                   "output": summary, "path": paths[0] if paths else None})
+        return err is None
+
     async def _code(
         self, run_id: int, project_id: int, step_id: int, base: Path, goal: str,
         step: dict, build_errors: str, model: str, project_rules: str, log: dict,
+        allow_image_gen: bool = False,
+        force_rewrite: bool = False,
     ) -> str:
         """Run the coder for one step. Returns "" on success, or feedback text to
         feed back into the next fix iteration (diff/parse errors)."""
@@ -570,6 +837,12 @@ class Pipeline:
             user += f"\n\nRelevant existing code:\n{retrieved}"
         if build_errors:
             user += f"\n\nThe previous attempt failed with:\n{build_errors}\n\nFix it."
+        if force_rewrite:
+            user += (
+                "\n\nIMPORTANT: previous EDIT diffs kept failing and may have left the "
+                "file inconsistent. Do NOT emit EDIT blocks this time. Rewrite each "
+                "target file COMPLETELY with a FILE: block containing the full, "
+                "valid contents from the first import to the last closing brace.")
         content, _ = await ollama.complete(
             model=model, messages=[{"role": "system", "content": sys},
                                    {"role": "user", "content": user}],
@@ -593,6 +866,7 @@ class Pipeline:
                     "for existing files or a FILE block for a new file.")
 
         feedback: list[str] = []
+        written_blobs: list[str] = []  # new file contents, for asset auto-detection
 
         # apply_diff tool calls (8.1)
         for path, blocks in edits:
@@ -605,6 +879,13 @@ class Pipeline:
                                            "output": f"refused: {path} is protected/reserved"})
                 feedback.append(f"{path} is protected (shadcn ui/, generated files, "
                                 "or .workbench/) — do not modify it")
+                continue
+            if _is_binary_path(path):
+                self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
+                                           "tool": "apply_diff", "ok": False,
+                                           "output": f"refused: {path} is a binary asset"})
+                feedback.append(f"{path} is a binary asset — never edit it as text; "
+                                "use GENERATE_IMAGE to (re)create images")
                 continue
             if not modes.tool_allowed(coder_mode, "apply_diff"):
                 self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
@@ -626,7 +907,10 @@ class Pipeline:
                                            "output": f"blocked: {e}"})
                 feedback.append(f"{path}: blocked ({e})")
                 continue
-            before = target.read_text(encoding="utf-8") if target.is_file() else ""
+            before = (
+                target.read_text(encoding="utf-8", errors="replace")
+                if target.is_file() else ""
+            )
             after, results = diff.apply_blocks(before, blocks)
             failed = [r for r in results if not r.ok]
             if failed:
@@ -643,6 +927,7 @@ class Pipeline:
                 feedback.append(f"{path}: write failed ({e})")
                 continue
             log["tools"].append({"tool": "apply_diff", "path": path, "ok": True})
+            written_blobs.append(after)
             self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
                                        "tool": "apply_diff", "ok": True,
                                        "output": f"{path}: applied {len(blocks)} block(s)",
@@ -662,6 +947,13 @@ class Pipeline:
                 feedback.append(f"{path} is protected (shadcn ui/, generated files, "
                                 "or .workbench/) — do not modify it")
                 continue
+            if _is_binary_path(path):
+                self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
+                                           "tool": "write_file", "ok": False,
+                                           "output": f"refused: {path} is a binary asset"})
+                feedback.append(f"{path} is a binary asset — never write it as text; "
+                                "use GENERATE_IMAGE to (re)create images")
+                continue
             if not modes.tool_allowed(coder_mode, "write_file"):
                 self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
                                            "tool": "write_file", "ok": False,
@@ -676,9 +968,13 @@ class Pipeline:
                 continue
             try:
                 target = sandbox.resolve_safe(base, path)
-                before = target.read_text(encoding="utf-8") if target.is_file() else ""
+                before = (
+                    target.read_text(encoding="utf-8", errors="replace")
+                    if target.is_file() else ""
+                )
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(body, encoding="utf-8")
+                written_blobs.append(body)
                 ok, msg = True, f"wrote {len(body)} bytes"
             except SandboxError as e:
                 ok, msg, before = False, f"blocked: {e}", ""
@@ -710,33 +1006,30 @@ class Pipeline:
                                        "tool": "run_command", "ok": rc == 0,
                                        "output": f"$ {' '.join(argv)} (exit {rc})\n{out[-2000:]}"})
 
-        # generate_image tool (Phase 6 hook): agent runs can produce assets via
-        # ComfyUI. Degrades gracefully to an error tool_result when ComfyUI is off.
-        gens = []
-        try:
-            d = extract_json(content)
-            if isinstance(d, dict):
-                gens = d.get("generate_image") or []
-        except Exception:
-            gens = []
-        for g in gens:
-            if not isinstance(g, dict):
-                continue
-            self._emit("tool_call", {"run_id": run_id, "step_id": step_id,
-                                     "tool": "generate_image", "args": g})
-            events: list[tuple[str, dict]] = []
-
-            async def _cb(t: str, p: dict, _ev=events) -> None:
-                _ev.append((t, p))
-
-            await comfy.generate(project_id, g.get("workflow", "txt2img.json"),
-                                 g.get("params", {}), _cb)
-            err = next((p["message"] for t, p in events if t == "error"), None)
-            saved = [p["path"] for t, p in events if t == "saved"]
-            log["tools"].append({"tool": "generate_image", "ok": err is None})
-            self._emit("tool_result", {"run_id": run_id, "step_id": step_id,
-                                       "tool": "generate_image", "ok": err is None,
-                                       "output": err or f"generated {len(saved)} image(s)"})
+        # generate_image (Phase 6 / 9): produce real assets via ComfyUI, written
+        # straight into public/ so the code referencing them resolves. Two triggers:
+        #  1. explicit GENERATE_IMAGE directives the coder emits, and
+        #  2. auto-detection — any /foo.png the coder references but hasn't created.
+        # (2) is the robust path: the model rarely remembers the directive, but it
+        # always names the <img>/background it wants. Only runs for image-enabled
+        # builds. Degrades to a tool_result error when ComfyUI is offline.
+        if allow_image_gen:
+            requested: set[str] = set()
+            for g in parse_image_directives(content):
+                dest = _clean_path(str(g.get("path", "")))
+                requested.add(dest)
+                await self._generate_asset(
+                    run_id, step_id, project_id, base, dest,
+                    g.get("prompt", asset_prompt(dest, goal)),
+                    bool(g.get("animate")), feedback, log,
+                    negative=g.get("negative"),
+                    overwrite=bool(g.get("overwrite")))
+            for dest, animate in find_referenced_assets(written_blobs, base):
+                if dest in requested:
+                    continue
+                await self._generate_asset(
+                    run_id, step_id, project_id, base, dest,
+                    asset_prompt(dest, goal), animate, feedback, log)
 
         # browser tool (8.8): screenshot/verify a running dev server. Console
         # errors feed back to the fix loop (the Reviewer signal).
@@ -812,6 +1105,54 @@ class Pipeline:
 
 
     # --- Build tab (Phase 9) --------------------------------------------------
+    async def _plan_build(self, run_id: int, step: dict, request: str,
+                          brief: str, model: str) -> str:
+        """Planner step for Build runs: turn the crawled context + request into a
+        detailed blueprint the Builder follows. Returns the plan text ("" on
+        failure — the build continues unplanned rather than dying here)."""
+        step_id = step["id"]
+        crud.update_step(step_id, "running")
+        self._emit("step_started", {"run_id": run_id, "step_id": step_id,
+                                    "idx": step["idx"], "title": step["title"],
+                                    "kind": "plan"})
+        log: dict = {"messages": [], "tools": []}
+        sys = (
+            "You are the PLANNER for a premium web-app build. Using the request "
+            "and the crawled project context, write a concise but complete "
+            "blueprint in markdown:\n"
+            "1. UNDERSTANDING — one paragraph: what the user wants and the vibe.\n"
+            "2. PAGE STRUCTURE — every section top-to-bottom with layout notes "
+            "(grid/flex, columns, spacing).\n"
+            "3. COMPONENTS — which of the AVAILABLE ui components each section "
+            "uses (never invent components).\n"
+            "4. VISUAL ASSETS — reuse existing public/ assets when they fit; "
+            "list any new image/animation to generate as `public/<name>.png` "
+            "(or .webp if animated) with a one-line generation prompt.\n"
+            "5. COPY — real headline/subcopy per section (no lorem ipsum).\n"
+            "Keep it under 500 words. No code."
+        )
+        user = f"Request: {request}\n\nCRAWLED PROJECT CONTEXT:\n{brief[:9000]}"
+        try:
+            content, _ = await ollama.complete(
+                model=model,
+                messages=[{"role": "system", "content": sys},
+                          {"role": "user", "content": user}],
+                temperature=0.4, top_p=0.9,
+            )
+        except Exception as exc:
+            crud.update_step(step_id, "failed", json.dumps(
+                {"messages": [{"role": "planner", "content": f"error: {exc}"}]}))
+            self._emit("step_update", {"run_id": run_id, "step_id": step_id,
+                                       "status": "failed"})
+            return ""
+        log["messages"].append({"role": "planner", "content": content})
+        self._emit("model_message", {"run_id": run_id, "step_id": step_id,
+                                     "role": "planner", "content": content})
+        crud.update_step(step_id, "passed", json.dumps(log))
+        self._emit("step_update", {"run_id": run_id, "step_id": step_id,
+                                   "status": "passed"})
+        return content.strip()
+
     async def _design(self, run_id, project_id, base, request, project_rules,
                       model, step, reference_colors=None) -> bool:
         """Designer step: produce an oklch palette matching the request and
@@ -909,11 +1250,33 @@ class Pipeline:
                           for c in a.get("colors", [])]
             content_blocks = [f"# {a['path']}\n{a['text']}" for a in attachments
                               if a["role"] == "content" and a.get("text")]
+            # Vision-model interpretations of attached images (9.11+): what the
+            # reference actually shows, not just its dominant colors.
+            image_notes = [f"Attached image ({a['role']}): {a['description']}"
+                           for a in attachments if a.get("description")]
+            if image_notes:
+                content_blocks = image_notes + content_blocks
 
-            design_row = crud.create_step(run_id, 0, "design", "Designer — palette", request)
+            step_rows = []
+            crawl_row = plan_row = None
+            if not design_only:
+                # Crawl + plan before anything runs: complete understanding of
+                # the project first, then a detailed blueprint to build against.
+                crawl_row = crud.create_step(run_id, len(step_rows), "crawl",
+                                             "Crawl — project context", request)
+                crawl_row["target_files"] = []
+                crawl_row["mode"] = None
+                step_rows.append(crawl_row)
+                plan_row = crud.create_step(run_id, len(step_rows), "plan",
+                                            "Plan — detailed blueprint", request)
+                plan_row["target_files"] = []
+                plan_row["mode"] = None
+                step_rows.append(plan_row)
+            design_row = crud.create_step(run_id, len(step_rows), "design",
+                                          "Designer — palette", request)
             design_row["target_files"] = []
             design_row["mode"] = None
-            step_rows = [design_row]
+            step_rows.append(design_row)
             if not design_only:
                 build_detail = request
                 if content_blocks:
@@ -921,38 +1284,98 @@ class Pipeline:
                         "\n\n".join(content_blocks)[:6000]
                 if generate_images:
                     build_detail += (
-                        "\n\nYou MAY call generate_image {workflow, params} to "
-                        "create hero images/logos/sprites; save into public/ and "
-                        "reference via <img> or bg. If it fails (ComfyUI offline), "
+                        "\n\nIMAGE GENERATION (ComfyUI): to create a real visual asset, "
+                        "emit a directive on its OWN line, exactly:\n"
+                        'GENERATE_IMAGE: {"path": "public/<name>.png", "prompt": '
+                        '"<detailed description matching the app\'s theme>", "animate": '
+                        'false}\n'
+                        "Rules:\n"
+                        "- path MUST be under public/ and MUST use .png for a still "
+                        "image or .webp when \"animate\": true.\n"
+                        "- Set \"animate\": true ONLY when the request implies motion "
+                        "(animated, looping, video, moving background); otherwise false "
+                        "for a still image (hero, logo, illustration, background).\n"
+                        "- Reference the asset in your TSX by its web path (e.g. "
+                        "<img src=\"/<name>.png\"> or style background-image "
+                        "url('/<name>.png')). The file is created at that path.\n"
+                        "- Emit one GENERATE_IMAGE line per asset, alongside your "
+                        "EDIT/FILE blocks.\n"
+                        "- Match the prompt to the design (colors, mood, subject) so "
+                        "the asset fits the app.\n"
+                        "If ComfyUI is offline the directive fails gracefully — then "
                         "use a bg-muted placeholder and note it as pending.")
-                build_row = crud.create_step(run_id, 1, "code",
+                build_row = crud.create_step(run_id, len(step_rows), "code",
                                              "Builder — compose routes", build_detail)
                 build_row["target_files"] = ["src/routes/index.tsx"]
                 build_row["mode"] = "coder"
                 step_rows.append(build_row)
 
-            self._emit("run_started", {"run_id": run_id, "goal": request, "steps": [
+            self._emit("run_started", {"run_id": run_id, "project_id": project_id,
+                                       "goal": request, "steps": [
                 {k: r[k] for k in ("id", "idx", "kind", "title", "detail", "status")}
                 | {"target_files": r["target_files"]} for r in step_rows]})
 
-            any_failed = not await self._design(run_id, project_id, base, request,
-                                                 project_rules, model, design_row,
-                                                 ref_colors)
+            any_failed = False
+            plan = ""
+            brief = ""
+            if not design_only:
+                # 1) CRAWL — complete understanding before anything runs.
+                self._emit("step_started", {"run_id": run_id, "step_id": crawl_row["id"],
+                                            "idx": crawl_row["idx"],
+                                            "title": crawl_row["title"], "kind": "crawl"})
+                brief = _crawl_context(base, attachments)
+                crawl_log = {"messages": [{"role": "crawler", "content": brief}], "tools": []}
+                crud.update_step(crawl_row["id"], "passed", json.dumps(crawl_log))
+                self._emit("model_message", {"run_id": run_id, "step_id": crawl_row["id"],
+                                             "role": "crawler", "content": brief})
+                self._emit("step_update", {"run_id": run_id, "step_id": crawl_row["id"],
+                                           "status": "passed"})
+                # 2) PLAN — detailed blueprint from the crawled context.
+                if not cancel.is_set():
+                    plan = await self._plan_build(run_id, plan_row, request, brief, model)
+
+            # 3) DESIGN — palette (plan's understanding sharpens the vibe).
+            design_request = request
+            if plan:
+                design_request += f"\n\nBuild blueprint (for the vibe):\n{plan[:1200]}"
+            if not cancel.is_set():
+                any_failed = not await self._design(run_id, project_id, base,
+                                                    design_request, project_rules,
+                                                    model, design_row, ref_colors)
+
+            # 4) BUILD — compose routes against the blueprint + crawled context.
             if not design_only and not cancel.is_set():
+                if plan:
+                    build_row["detail"] += (
+                        f"\n\nBLUEPRINT — follow this closely:\n{plan[:5000]}")
+                if brief:
+                    build_row["detail"] += (
+                        f"\n\nCRAWLED PROJECT CONTEXT:\n{brief[:5000]}")
+                build_row["detail"] += (
+                    "\n\nQUALITY BAR (premium): generous whitespace on a consistent "
+                    "spacing scale; strong typographic hierarchy; subtle depth "
+                    "(shadows/gradients via tokens); hover and focus states on every "
+                    "interactive element; fully responsive (mobile-first grid); real "
+                    "copy, never lorem ipsum; icons from lucide-react; colors ONLY "
+                    "via design tokens (bg-background, text-foreground, etc.); import "
+                    "only components that exist in the AVAILABLE list.")
                 ok = await self._execute_step(run_id, project_id, base, request,
-                                              step_rows[1], model, project_rules,
-                                              max_iterations, cancel)
+                                              build_row, model, project_rules,
+                                              max_iterations, cancel,
+                                              allow_image_gen=generate_images)
                 if not ok:
                     any_failed = True
 
             summary = await self._summarize(run_id, request, helper_model)
             status = "cancelled" if cancel.is_set() else ("failed" if any_failed else "done")
             crud.update_run(run_id, status, summary)
-            self._emit("run_done", {"run_id": run_id, "status": status, "summary": summary})
+            self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                    "status": status, "summary": summary})
         except Exception as exc:
             crud.update_run(run_id, "failed", f"error: {exc}")
             self._emit("error", {"run_id": run_id, "message": f"{type(exc).__name__}: {exc}"})
-            self._emit("run_done", {"run_id": run_id, "status": "failed",
+            self._emit("run_done", {"run_id": run_id, "project_id": project_id,
+                                    "status": "failed",
                                     "summary": f"Build failed: {exc}"})
         finally:
             self._cancels.pop(run_id, None)

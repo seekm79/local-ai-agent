@@ -92,6 +92,22 @@ def list_assets(project_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_asset(asset_id: int) -> dict | None:
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM assets WHERE id = ?", (asset_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def delete_asset(asset_id: int) -> None:
+    with get_conn() as c:
+        c.execute("DELETE FROM assets WHERE id = ?", (asset_id,))
+
+
+def update_asset_params(asset_id: int, params: str) -> None:
+    with get_conn() as c:
+        c.execute("UPDATE assets SET params = ? WHERE id = ?", (params, asset_id))
+
+
 # --- Chats -------------------------------------------------------------------
 def list_chats() -> list[dict]:
     with get_conn() as c:
@@ -230,6 +246,22 @@ def update_run(run_id: int, status: str, summary: str | None = None) -> None:
             "UPDATE agent_runs SET status = ?, summary = COALESCE(?, summary) WHERE id = ?",
             (status, summary, run_id),
         )
+
+
+def reset_orphaned_runs() -> int:
+    """Mark runs left mid-flight by a previous process as interrupted. A run in
+    'running'/'pending'/'waiting' has no live pipeline task after a restart, so
+    it would otherwise show as perpetually 'running' in the UI. Returns count."""
+    with get_conn() as c:
+        cur = c.execute(
+            "UPDATE agent_runs SET status = 'interrupted', "
+            "summary = COALESCE(summary, 'Interrupted — the server restarted while "
+            "this run was in progress.') "
+            "WHERE status IN ('running', 'pending', 'waiting')"
+        )
+        # In-progress steps are dead too; surface them as failed for clarity.
+        c.execute("UPDATE agent_steps SET status = 'failed' WHERE status = 'running'")
+        return cur.rowcount
 
 
 def list_runs() -> list[dict]:

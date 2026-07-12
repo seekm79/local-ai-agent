@@ -1,0 +1,75 @@
+{
+  "name": "Text to Animation (LTX-Video)",
+  "kind": "video",
+  "description": "Text-to-video via LTX-Video. Produces a short animated WEBP loop. The checkpoint auto-adapts to whatever LTX-Video model is installed in ComfyUI. Needs a t5xxl text encoder (clip) and the LTX checkpoint present.",
+  "slots": [
+    { "key": "positive", "label": "Prompt", "type": "text", "default": "a slow cinematic pan across a warm coffee shop, steam rising, golden light" },
+    { "key": "negative", "label": "Negative prompt", "type": "text", "default": "blurry, distorted, low quality, jitter" },
+    { "key": "seed", "label": "Seed", "type": "int", "default": 0 },
+    { "key": "steps", "label": "Steps", "type": "int", "default": 8 },
+    { "key": "width", "label": "Width", "type": "int", "default": 768 },
+    { "key": "height", "label": "Height", "type": "int", "default": 512 },
+    { "key": "length", "label": "Frames (8n+1)", "type": "int", "default": 25 },
+    { "key": "fps", "label": "FPS", "type": "float", "default": 25 }
+  ],
+  "workflow": {
+    "ckpt": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": { "ckpt_name": "ltxv-2b-0.9.6-distilled.safetensors" }
+    },
+    "clip": {
+      "class_type": "CLIPLoader",
+      "inputs": { "clip_name": "t5xxl_fp8_e4m3fn.safetensors", "type": "ltxv" }
+    },
+    "pos": {
+      "class_type": "CLIPTextEncode",
+      "inputs": { "text": "{{positive}}", "clip": ["clip", 0] }
+    },
+    "neg": {
+      "class_type": "CLIPTextEncode",
+      "inputs": { "text": "{{negative}}", "clip": ["clip", 0] }
+    },
+    "latent": {
+      "class_type": "EmptyLTXVLatentVideo",
+      "inputs": { "width": "{{width}}", "height": "{{height}}", "length": "{{length}}", "batch_size": 1 }
+    },
+    "cond": {
+      "class_type": "LTXVConditioning",
+      "inputs": { "positive": ["pos", 0], "negative": ["neg", 0], "frame_rate": "{{fps}}" }
+    },
+    "msl": {
+      "class_type": "ModelSamplingLTXV",
+      "inputs": { "model": ["ckpt", 0], "max_shift": 2.05, "base_shift": 0.95, "latent": ["latent", 0] }
+    },
+    "ks": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": "{{seed}}",
+        "steps": "{{steps}}",
+        "cfg": 1.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0,
+        "model": ["msl", 0],
+        "positive": ["cond", 0],
+        "negative": ["cond", 1],
+        "latent_image": ["latent", 0]
+      }
+    },
+    "vae": {
+      "class_type": "VAEDecode",
+      "inputs": { "samples": ["ks", 0], "vae": ["ckpt", 2] }
+    },
+    "save": {
+      "class_type": "SaveAnimatedWEBP",
+      "inputs": {
+        "images": ["vae", 0],
+        "filename_prefix": "workbench_anim",
+        "fps": "{{fps}}",
+        "lossless": false,
+        "quality": 85,
+        "method": "default"
+      }
+    }
+  }
+}

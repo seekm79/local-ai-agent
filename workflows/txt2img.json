@@ -1,13 +1,14 @@
 {
-  "name": "Text to Image (SD1.5)",
-  "description": "Basic Stable Diffusion 1.5 text-to-image. Requires a checkpoint installed in ComfyUI (edit `ckpt_name` in the workflow below to match yours).",
+  "name": "Text to Image (SDXL)",
+  "kind": "image",
+  "description": "Text-to-image via Stable Diffusion. The checkpoint auto-adapts to whatever image model is installed in ComfyUI (falls back from the name below to an installed one).",
   "slots": [
     { "key": "positive", "label": "Prompt", "type": "text", "default": "a cozy cabin in a pine forest, golden hour, highly detailed" },
     { "key": "negative", "label": "Negative prompt", "type": "text", "default": "blurry, low quality, watermark" },
     { "key": "seed", "label": "Seed", "type": "int", "default": 0 },
-    { "key": "steps", "label": "Steps", "type": "int", "default": 20 },
-    { "key": "width", "label": "Width", "type": "int", "default": 512 },
-    { "key": "height", "label": "Height", "type": "int", "default": 512 }
+    { "key": "steps", "label": "Steps", "type": "int", "default": 25 },
+    { "key": "width", "label": "Width", "type": "int", "default": 1024 },
+    { "key": "height", "label": "Height", "type": "int", "default": 1024 }
   ],
   "workflow": {
     "3": {
@@ -27,7 +28,7 @@
     },
     "4": {
       "class_type": "CheckpointLoaderSimple",
-      "inputs": { "ckpt_name": "v1-5-pruned-emaonly.safetensors" }
+      "inputs": { "ckpt_name": "sd_xl_base_1.0.safetensors" }
     },
     "5": {
       "class_type": "EmptyLatentImage",

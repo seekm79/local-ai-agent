@@ -3,7 +3,7 @@ import * as api from "../../api/client";
 import { useProject } from "../../stores/project";
 import FileTree from "../editor/FileTree";
 import EditorTabs from "../editor/EditorTabs";
-import CodeEditor from "../editor/CodeEditor";
+import FileViewer from "../editor/FileViewer";
 import ThemePanel from "./ThemePanel";
 
 type Tab = "preview" | "code" | "agents" | "theme";
@@ -118,7 +118,7 @@ export default function BuildPreview({
               <EditorTabs />
               <div className="min-h-0 flex-1">
                 {activeFile ? (
-                  <CodeEditor path={activeFile.path} content={activeFile.content} />
+                  <FileViewer projectId={projectId} path={activeFile.path} content={activeFile.content} />
                 ) : (
                   <div className="flex h-full items-center justify-center text-neutral-500">
                     Open a file from the tree.

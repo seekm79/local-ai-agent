@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from .. import config, crud
-from ..services import build, embeddings, uploads
+from ..services import build, embeddings, ollama, uploads
 from ..services.pipeline import pipeline
 from ..services.runner import runner
 from ..services.sandbox import SandboxError
@@ -32,16 +32,67 @@ def status() -> dict:
     }
 
 
+@router.get("/api/build/projects")
+def list_build_projects() -> list[dict]:
+    """Build-tab projects (scaffolded from the web template) with each one's
+    latest agent run, so the UI can show which are still building and let the
+    user re-open a finished or in-flight project."""
+    latest: dict[int, dict] = {}
+    for r in crud.list_runs():  # newest first — keep the first seen per project
+        latest.setdefault(r["project_id"], r)
+    out: list[dict] = []
+    for p in crud.list_projects():
+        base = Path(p["path"])
+        if not ((base / "bunfig.toml").is_file() and (base / "package.json").is_file()):
+            continue  # not a web-template build project
+        run = latest.get(p["id"])
+        out.append({
+            "id": p["id"],
+            "name": p["name"],
+            "created_at": p["created_at"],
+            "deps_installed": (base / "node_modules").is_dir(),
+            "latest_run": {
+                "id": run["id"], "status": run["status"], "goal": run["goal"],
+            } if run else None,
+        })
+    return out
+
+
 class ScaffoldBody(BaseModel):
     name: str
     prompt: str = ""
+
+
+async def _suggest_name(prompt: str, fallback: str = "") -> str:
+    """Generate a concise, human project name from the build prompt via the helper
+    model. Falls back to the non-LLM heuristic on empty/garbage/timeout so scaffold
+    is never blocked (and never named by cropping the first few words)."""
+    heuristic = build.name_from_prompt(prompt) or fallback.strip() or "app"
+    text = (prompt or "").strip()
+    if len(text) < 8:
+        return heuristic
+    sys = ("You name software projects. Reply with ONLY a concise project name of "
+           "2 to 4 words in Title Case — no quotes, punctuation, or explanation. "
+           "Keep acronyms uppercase. Example: Helpdesk CRM")
+    try:
+        content, _ = await asyncio.wait_for(
+            ollama.complete(model=config.MODEL_HELPER,
+                            messages=[{"role": "system", "content": sys},
+                                      {"role": "user", "content": text[:1500]}],
+                            temperature=0.3),
+            timeout=25)
+    except Exception:
+        return heuristic
+    return build.clean_name(content) or heuristic
 
 
 @router.post("/api/build/scaffold")
 async def scaffold(body: ScaffoldBody) -> dict:
     if not build.template_available():
         raise HTTPException(412, "web template missing at templates/webapp-base")
-    proj = build.scaffold(body.name.strip() or "app", body.prompt)
+    # Derive a proper name from the prompt (the client-sent name is just a fallback).
+    name = await _suggest_name(body.prompt, body.name)
+    proj = build.scaffold(name, body.prompt)
     # Kick off dependency install as a managed process (streams over /ws/run).
     proc = await runner.start(
         proj["id"], "install deps", build.install_command(), proj["path"]
@@ -70,16 +121,38 @@ async def attach(
         raise HTTPException(400, "invalid role")
     base = _base(project_id)
     try:
-        return uploads.save_attachment(
+        info = uploads.save_attachment(
             project_id, base, file.filename or "upload", await file.read(), role
         )
     except SandboxError as exc:
         raise HTTPException(400, str(exc))
+    # Interpret image attachments with an installed vision model (best-effort,
+    # in the background so the upload responds immediately). The description is
+    # merged onto the attachment for the planner/builder to read.
+    if info.get("kind") == "image":
+        target = base / info["path"]
+        purpose = "design reference" if role == "design_reference" else "content image"
+
+        async def _describe(aid: int = info["id"], p=target, pur=purpose) -> None:
+            desc = await ollama.describe_image(p, pur)
+            if desc:
+                uploads.set_description(aid, desc)
+
+        asyncio.create_task(_describe())
+    return info
 
 
 @router.get("/api/build/attachments/{project_id}")
 def list_attachments(project_id: int) -> list[dict]:
     return uploads.list_attachments(project_id)
+
+
+@router.delete("/api/build/attachments/{project_id}/{asset_id}")
+def delete_attachment(project_id: int, asset_id: int) -> dict:
+    base = _base(project_id)
+    if not uploads.delete_attachment(project_id, asset_id, base):
+        raise HTTPException(404, "attachment not found")
+    return {"status": "deleted"}
 
 
 class BuildStart(BaseModel):

@@ -17,6 +17,11 @@ class StartRun(BaseModel):
     helper_model: str | None = None
     max_iterations: int = config.AGENT_MAX_FIX_ITERATIONS
     halt_on_fail: bool = False
+    # "single" = Phase-4 plan-once pipeline; "orchestrated" = Phase-10 backlog +
+    # ReAct worker loop (for large, multi-module goals).
+    strategy: str = "single"
+    # Per-task step budget for the orchestrated worker loop.
+    max_steps: int = config.AGENT_WORKER_MAX_STEPS
 
 
 @router.post("/api/agents/start")
@@ -31,15 +36,26 @@ async def start(body: StartRun) -> dict:
     model = body.model or config.MODEL_PLANNER
     if "embed" in model.lower():  # embedding models can't chat — fall back
         model = config.MODEL_PLANNER
-    pipeline.start(
-        run_id=run["id"],
-        project_id=body.project_id,
-        goal=body.goal.strip(),
-        model=model,
-        helper_model=body.helper_model or config.MODEL_HELPER,
-        max_iterations=max(1, body.max_iterations),
-        halt_on_fail=body.halt_on_fail,
-    )
+
+    if body.strategy == "orchestrated":
+        pipeline.start_orchestrated(
+            run_id=run["id"],
+            project_id=body.project_id,
+            goal=body.goal.strip(),
+            model=model,
+            helper_model=body.helper_model or config.MODEL_HELPER,
+            max_steps=max(1, body.max_steps),
+        )
+    else:
+        pipeline.start(
+            run_id=run["id"],
+            project_id=body.project_id,
+            goal=body.goal.strip(),
+            model=model,
+            helper_model=body.helper_model or config.MODEL_HELPER,
+            max_iterations=max(1, body.max_iterations),
+            halt_on_fail=body.halt_on_fail,
+        )
     return {"run_id": run["id"]}
 
 

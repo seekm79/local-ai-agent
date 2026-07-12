@@ -50,10 +50,15 @@ COMFY_BASE_URL: str = os.environ.get("WORKBENCH_COMFY_URL", "http://127.0.0.1:81
 # --- Models ------------------------------------------------------------------
 # Primary/big model and small helper. Everything downstream reads these names,
 # so swapping a model is a one-line change here.
-MODEL_BIG: str = os.environ.get("WORKBENCH_MODEL_BIG", "qwen3.6:35b")
-# Helper does summaries/commit messages — it must be an *instruct* model, not a
-# base model. phi3:mini is a small instruct default; override as you like.
-MODEL_HELPER: str = os.environ.get("WORKBENCH_MODEL_HELPER", "phi3:mini")
+# Text/coding/planning model. Use qwen3-coder:30b: it fits fully on GPU (~44 GB)
+# and is fast. Do NOT default this to a vision model like qwen3-vl:32b — the text
+# path uses the model's DEFAULT context (qwen3-vl: 262k ≈ 89 GB), which spills to
+# CPU and stalls generation. Image interpretation is handled separately by an
+# auto-selected vision model (ollama.find_vision_model, context-capped at 8k).
+MODEL_BIG: str = os.environ.get("WORKBENCH_MODEL_BIG", "qwen3-coder:30b")
+# Helper does summaries/commit messages — must be an *instruct* model. Defaults to
+# the big model so nothing references an uninstalled tag.
+MODEL_HELPER: str = os.environ.get("WORKBENCH_MODEL_HELPER", "qwen3-coder:30b")
 # Embedding model for codebase semantic search (Phase 8.3).
 MODEL_EMBED: str = os.environ.get("WORKBENCH_MODEL_EMBED", "nomic-embed-text")
 
@@ -92,6 +97,9 @@ DENY_COMMANDS: list[str] = [
 AGENT_MAX_FIX_ITERATIONS: int = 3
 # Max rounds of JSON re-prompting when the planner emits unparseable JSON.
 AGENT_PLAN_RETRIES: int = 2
+# Orchestrated strategy (Phase 10): max ReAct loop turns a worker gets per task
+# before the task is marked failed. Each turn is one tool action.
+AGENT_WORKER_MAX_STEPS: int = 20
 # Timeout for a single reviewer/coder command (seconds).
 AGENT_COMMAND_TIMEOUT: float = 240.0
 

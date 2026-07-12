@@ -112,6 +112,52 @@ async def check_online() -> tuple[bool, str | None]:
         return False, f"ComfyUI not detected at {config.COMFY_BASE_URL} ({type(exc).__name__})"
 
 
+async def list_installed_checkpoints() -> list[str]:
+    """Ask the live ComfyUI which checkpoints are actually installed. Empty on
+    failure — callers treat that as 'can't verify, leave the graph as-is'."""
+    url = f"{config.COMFY_BASE_URL.rstrip('/')}/object_info/CheckpointLoaderSimple"
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            data = (await client.get(url)).json()
+        return list(data["CheckpointLoaderSimple"]["input"]["required"]["ckpt_name"][0])
+    except Exception:
+        return []
+
+
+# Substrings that mark a checkpoint as a video/animation model — used to keep an
+# image workflow from grabbing a video model (and vice-versa) when auto-repairing.
+_VIDEO_CKPT_HINTS = ("ltx", "svd", "video", "wan", "hunyuan", "mochi", "cosmos", "animate")
+
+
+def _pick_checkpoint(available: list[str], want_video: bool) -> str | None:
+    """Choose an installed checkpoint of the right kind, else any installed one."""
+    def is_video(name: str) -> bool:
+        return any(h in name.lower() for h in _VIDEO_CKPT_HINTS)
+
+    preferred = [c for c in available if is_video(c) == want_video]
+    return (preferred or available or [None])[0]
+
+
+def repair_checkpoints(graph: dict, available: list[str], want_video: bool) -> list[str]:
+    """Swap any CheckpointLoaderSimple whose ckpt_name isn't installed for one
+    that is. Mutates `graph` in place; returns human-readable notes about swaps so
+    the caller can surface them instead of failing silently (reliability)."""
+    notes: list[str] = []
+    if not available:
+        return notes
+    for node in graph.values():
+        if not isinstance(node, dict) or node.get("class_type") != "CheckpointLoaderSimple":
+            continue
+        current = node.get("inputs", {}).get("ckpt_name")
+        if current in available:
+            continue
+        replacement = _pick_checkpoint(available, want_video)
+        if replacement:
+            node["inputs"]["ckpt_name"] = replacement
+            notes.append(f"checkpoint '{current}' not installed — using '{replacement}'")
+    return notes
+
+
 def _ws_url(client_id: str) -> str:
     base = config.COMFY_BASE_URL.rstrip("/")
     scheme = "wss" if base.startswith("https") else "ws"
@@ -124,9 +170,15 @@ async def generate(
     workflow_file: str,
     params: dict,
     on_event: ProgressCb,
+    dest_rel: str | None = None,
 ) -> None:
     """Full generation flow. Emits events via on_event(type, payload):
-    'progress' {value,max}, 'saved' {path}, 'done' {paths}, 'error' {message}."""
+    'progress' {value,max}, 'saved' {path}, 'done' {paths}, 'error' {message}.
+
+    If ``dest_rel`` is given, the first output is written to that exact project-
+    relative path (e.g. ``public/hero.png``) instead of an auto name under
+    assets/, so generated code can reference a known URL. The extension is
+    forced to match the actual output so an animated webp stays a .webp."""
     online, err = await check_online()
     if not online:
         await on_event("error", {"message": err or "ComfyUI offline"})
@@ -144,6 +196,12 @@ async def generate(
     except Exception as exc:
         await on_event("error", {"message": f"workflow error: {exc}"})
         return
+
+    # Auto-adapt to the models this ComfyUI actually has, so a workflow authored
+    # against a different machine's checkpoint still runs instead of erroring.
+    want_video = template.get("kind") == "video"
+    for note in repair_checkpoints(graph, await list_installed_checkpoints(), want_video):
+        await on_event("note", {"message": note})
 
     client_id = uuid.uuid4().hex
     comfy = config.COMFY_BASE_URL.rstrip("/")
@@ -182,32 +240,46 @@ async def generate(
             hist = (await client.get(f"{comfy}/history/{prompt_id}")).json()
             outputs = hist.get(prompt_id, {}).get("outputs", {})
             saved: list[str] = []
+            # ComfyUI reports still images under 'images'; animated/video nodes
+            # (SaveAnimatedWEBP/PNG, VHS_VideoCombine, LTX savers) use 'images',
+            # 'gifs', or 'videos'. Capture them all so animations aren't dropped.
+            first = True
             for node in outputs.values():
-                for img in node.get("images", []):
-                    data_bytes = (
-                        await client.get(
-                            f"{comfy}/view",
-                            params={
-                                "filename": img["filename"],
-                                "subfolder": img.get("subfolder", ""),
-                                "type": img.get("type", "output"),
-                            },
+                for key in ("images", "gifs", "videos"):
+                    for out in node.get(key, []):
+                        data_bytes = (
+                            await client.get(
+                                f"{comfy}/view",
+                                params={
+                                    "filename": out["filename"],
+                                    "subfolder": out.get("subfolder", ""),
+                                    "type": out.get("type", "output"),
+                                },
+                            )
+                        ).content
+                        actual_ext = Path(out["filename"]).suffix
+                        if dest_rel and first:
+                            # write the primary output to the caller's chosen path,
+                            # but keep the real extension so the file stays valid.
+                            rel = str(Path(dest_rel).with_suffix(actual_ext))
+                        else:
+                            rel = f"assets/{prompt_id[:8]}_{out['filename']}"
+                        first = False
+                        target = sandbox.resolve_safe(base_dir, rel)
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_bytes(data_bytes)
+                        ext = Path(out["filename"]).suffix.lower()
+                        kind = "video" if ext in (".mp4", ".webm", ".gif", ".webp") else "image"
+                        crud.create_asset(
+                            project_id,
+                            str(target),
+                            kind,
+                            params.get("positive", ""),
+                            template.get("name", workflow_file),
+                            json.dumps(params),
                         )
-                    ).content
-                    rel = f"assets/{prompt_id[:8]}_{img['filename']}"
-                    target = sandbox.resolve_safe(base_dir, rel)
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_bytes(data_bytes)
-                    crud.create_asset(
-                        project_id,
-                        str(target),
-                        "image",
-                        params.get("positive", ""),
-                        template.get("name", workflow_file),
-                        json.dumps(params),
-                    )
-                    saved.append(sandbox.relpath_within(base_dir, target))
-                    await on_event("saved", {"path": rel})
+                        saved.append(sandbox.relpath_within(base_dir, target))
+                        await on_event("saved", {"path": rel, "kind": kind})
 
         await on_event("done", {"paths": saved})
     except Exception as exc:

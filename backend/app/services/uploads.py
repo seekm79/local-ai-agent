@@ -94,9 +94,39 @@ def save_attachment(project_id: int, base: Path, filename: str, data: bytes,
     if role == "content":
         meta["text"] = extract_text(target)
 
-    crud.create_asset(project_id, str(target), kind, None, role, json.dumps(meta))
-    return {"path": rel, "role": role, "kind": kind,
+    row = crud.create_asset(project_id, str(target), kind, None, role, json.dumps(meta))
+    return {"id": row["id"], "path": rel, "role": role, "kind": kind,
             "colors": meta.get("colors", []), "has_text": bool(meta.get("text"))}
+
+
+def set_description(asset_id: int, description: str) -> None:
+    """Attach a vision-model description to an image attachment (merged into
+    the params JSON so the planner/builder can read what the image shows)."""
+    a = crud.get_asset(asset_id)
+    if not a:
+        return
+    try:
+        meta = json.loads(a.get("params") or "{}")
+    except Exception:
+        meta = {}
+    meta["description"] = description[:2000]
+    crud.update_asset_params(asset_id, json.dumps(meta))
+
+
+def delete_attachment(project_id: int, asset_id: int, base: Path) -> bool:
+    """Remove an attachment: DB row + the uploaded file (sandbox-checked).
+    Returns False if the asset doesn't exist or belongs to another project."""
+    a = crud.get_asset(asset_id)
+    if not a or a["project_id"] != project_id:
+        return False
+    try:
+        target = Path(a["path"]).resolve()
+        target.relative_to(base.resolve())  # must live inside the project
+        target.unlink(missing_ok=True)
+    except (ValueError, OSError):
+        pass  # file already gone or outside base — still drop the record
+    crud.delete_asset(asset_id)
+    return True
 
 
 def list_attachments(project_id: int) -> list[dict]:
@@ -114,5 +144,6 @@ def list_attachments(project_id: int) -> list[dict]:
                 "id": a["id"], "path": a["path"], "role": role, "kind": a["kind"],
                 "colors": meta.get("colors", []),
                 "text": meta.get("text", ""),
+                "description": meta.get("description", ""),
             })
     return out

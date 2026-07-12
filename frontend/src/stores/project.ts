@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as api from "../api/client";
+import { fileKind, isRawMedia } from "../lib/fileKind";
 
 type Project = api.Project;
 type TreeNode = api.TreeNode;
@@ -161,6 +162,14 @@ export const useProject = create<ProjectState>((set, get) => ({
       set({ activePath: path });
       return;
     }
+    // Media files stream from /raw in the viewer — no text fetch (it would 415).
+    if (isRawMedia(fileKind(path))) {
+      set((s) => ({
+        openFiles: [...s.openFiles, { path, content: "", original: "" }],
+        activePath: path,
+      }));
+      return;
+    }
     try {
       const { content } = await api.readFile(pid, path);
       set((s) => ({
@@ -197,6 +206,8 @@ export const useProject = create<ProjectState>((set, get) => ({
     const pid = get().currentId;
     const file = get().openFiles.find((f) => f.path === path);
     if (pid == null || !file) return;
+    // Never text-save media/doc kinds — it would clobber the binary with "".
+    if (fileKind(path) !== "code") return;
     try {
       await api.writeFile(pid, path, file.content);
       set((s) => ({

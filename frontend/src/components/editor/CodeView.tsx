@@ -7,7 +7,7 @@ import Composer from "../chat/Composer";
 import FileTree from "./FileTree";
 import CodeSearch from "./CodeSearch";
 import EditorTabs from "./EditorTabs";
-import CodeEditor from "./CodeEditor";
+import FileViewer from "./FileViewer";
 import DiffModal from "./DiffModal";
 import Terminal from "../terminal/Terminal";
 import RunPanel from "../terminal/RunPanel";
@@ -208,7 +208,7 @@ export default function CodeView() {
             <EditorTabs />
             <div className="min-h-0 flex-1">
               {activeFile ? (
-                <CodeEditor path={activeFile.path} content={activeFile.content} />
+                <FileViewer projectId={currentId!} path={activeFile.path} content={activeFile.content} />
               ) : (
                 <div className="flex h-full items-center justify-center text-neutral-500">
                   Open a file from the tree to edit it.
